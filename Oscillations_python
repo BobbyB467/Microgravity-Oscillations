@@ -1,27 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Function to simulate pendulum motion
 def simulate_pendulum(L, g, theta_0, omega_0, dt, t_max, damping=0.0):
-    """
-    Simulates pendulum motion using the Runge-Kutta method.
-    """
     t = np.arange(0, t_max, dt)
     theta = np.zeros_like(t)
     omega = np.zeros_like(t)
     theta[0] = theta_0
     omega[0] = omega_0
-    
     for i in range(1, len(t)):
         alpha = -(g / L) * np.sin(theta[i - 1]) - damping * omega[i - 1]
         omega[i] = omega[i - 1] + alpha * dt
         theta[i] = theta[i - 1] + omega[i] * dt
-
     return t, theta, omega
 
+# Function to calculate energy
 def calculate_energy(theta, omega, L, g):
-    """
-    Calculates the total mechanical energy of the pendulum.
-    """
     kinetic = 0.5 * omega**2
     potential = g * (1 - np.cos(theta))
     return kinetic + potential
@@ -31,57 +25,64 @@ L = 1.0  # Length of pendulum (meters)
 theta_0 = np.pi / 6  # Initial angle (30 degrees in radians)
 omega_0 = 0.0  # Initial angular velocity
 dt = 0.01  # Time step (seconds)
-t_max = 10  # Simulation time (seconds)
+t_max = 60  # Extended simulation time (seconds)
 g_values = {"Earth": 9.8, "Moon": 1.6, "Mars": 3.7, "Microgravity": 0.1}
 damping_values = [0.0, 0.05, 0.1, 0.2]
 
-# Generate data for all gravity conditions
-results = {}
-for label, g in g_values.items():
-    t, theta, omega = simulate_pendulum(L, g, theta_0, omega_0, dt, t_max)
-    results[label] = (t, theta, omega)
-
 # Figure 1: Period of Oscillation vs. Gravity
 periods = []
-for label, (t, theta, _) in results.items():
+for label, g in g_values.items():
+    t, theta, _ = simulate_pendulum(L, g, theta_0, omega_0, dt, t_max)
     zero_crossings = np.where(np.diff(np.sign(theta)))[0]
     if len(zero_crossings) >= 2:
         period = 2 * (t[zero_crossings[1]] - t[zero_crossings[0]])
     else:
-        period = 0  # Substitute 0 for undefined periods
+        period = None
     periods.append(period)
 
 plt.figure(figsize=(8, 5))
-plt.bar(g_values.keys(), periods, color="skyblue")
+plt.bar(g_values.keys(), [p if p is not None else 0 for p in periods], color="skyblue")
 plt.title("Figure 1: Period of Oscillation vs. Gravity")
 plt.xlabel("Gravitational Environment")
 plt.ylabel("Period (seconds)")
 plt.grid(axis='y')
-plt.savefig("Figure_1_Period_vs_Gravity.png")
+plt.savefig("Figure_1_Period_vs_Gravity_Extended.png")
 plt.show()
 
-# Figure 2: Angular Displacement vs. Time
-plt.figure(figsize=(8, 5))
-for label, (t, theta, _) in results.items():
-    plt.plot(t, theta, label=f"{label} Gravity")
-plt.title("Figure 2: Angular Displacement vs. Time")
-plt.xlabel("Time (seconds)")
-plt.ylabel("Angular Displacement (radians)")
-plt.legend()
-plt.grid()
-plt.savefig("Figure_2_Angular_Displacement_vs_Time.png")
+# Figure 2: Angular Displacement vs. Time in 2x2 Panels
+fig, axes = plt.subplots(2, 2, figsize=(14, 10), sharey=True)
+axes = axes.flatten()
+
+for ax, (label, g) in zip(axes, g_values.items()):
+    t, theta, _ = simulate_pendulum(L, g, theta_0, omega_0, dt, t_max)
+    ax.plot(t, theta, label=f"{label} Gravity")
+    ax.set_title(f"{label} Gravity")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Angular Displacement (rad)")
+    ax.grid()
+    ax.legend()
+
+fig.suptitle("Figure 2: Angular Displacement vs. Time Across Gravity Conditions (Earth, Moon, Mars, Microgravity)")
+plt.tight_layout()
+plt.savefig("Figure_2_Angular_Displacement_2x2_Panels_Extended.png")
 plt.show()
 
-# Figure 3: Energy Dissipation vs. Time with Damping
-plt.figure(figsize=(8, 5))
-for damping in damping_values:
-    t, theta, omega = simulate_pendulum(L, g_values["Earth"], theta_0, omega_0, dt, t_max, damping)
-    energy = calculate_energy(theta, omega, L, g_values["Earth"])
-    plt.plot(t, energy, label=f"Damping = {damping}")
-plt.title("Figure 3: Energy Dissipation vs. Time (Earth Gravity)")
-plt.xlabel("Time (seconds)")
-plt.ylabel("Total Energy (arbitrary units)")
-plt.legend()
-plt.grid()
-plt.savefig("Figure_3_Energy_Dissipation_vs_Time.png")
+# Figure 3: Energy Dissipation vs. Time in 2x2 Panels
+fig, axes = plt.subplots(2, 2, figsize=(14, 10), sharey=True)
+axes = axes.flatten()
+
+for ax, (label, g) in zip(axes, g_values.items()):
+    for damping in damping_values:
+        t, theta, omega = simulate_pendulum(L, g, theta_0, omega_0, dt, t_max, damping)
+        energy = calculate_energy(theta, omega, L, g)
+        ax.plot(t, energy, label=f"Damping = {damping}")
+    ax.set_title(f"{label} Gravity")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Total Energy (arbitrary units)")
+    ax.grid()
+    ax.legend()
+
+fig.suptitle("Figure 3: Energy Dissipation Across Gravity Conditions (Earth, Moon, Mars, Microgravity)")
+plt.tight_layout()
+plt.savefig("Figure_3_Energy_Dissipation_2x2_Panels_Extended.png")
 plt.show()
